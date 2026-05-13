@@ -1,0 +1,2453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- SEO -->
+  <title>VOYA — AI-Powered Travel Journal & Explorer Community</title>
+  <meta name="description" content="Share your world explorations, write your travel story, and let AI connect you with travelers who've walked the same invisible roads. Join 94,000 wanderers on VOYA." />
+  <meta name="keywords" content="travel journal, AI travel, exploration community, world travel, traveler connections, journal app" />
+  <meta property="og:title" content="VOYA — Travel the Unknown" />
+  <meta property="og:description" content="The AI-powered travel journal for those who explore beyond the map." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ============================================================
+       DESIGN TOKENS
+    ============================================================ */
+    :root {
+      --void:    #020408;
+      --deep:    #060d1a;
+      --cosmos:  #0a1628;
+      --nebula:  #0d2040;
+      --dim:     #1a2d45;
+      --muted:   #4a6080;
+      --star:    #e8f4ff;
+      --glow:    #4fc3f7;
+      --aurora:  #00e5cc;
+      --pulse:   #ff6b6b;
+      --gold:    #ffd54f;
+
+      --font-display: 'Syne', sans-serif;
+      --font-body:    'Space Mono', monospace;
+      --font-serif:   'Instrument Serif', serif;
+
+      --radius-clip: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* ============================================================
+       RESET & BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; font-size: 16px; }
+
+    body {
+      background: var(--void);
+      color: var(--star);
+      font-family: var(--font-body);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Hide native cursor on fine-pointer (mouse) desktops only */
+    @media (pointer: fine) {
+      html, body, a, button, textarea, input, label, [role="button"] {
+        cursor: none !important;
+      }
+    }
+
+    img { display: block; max-width: 100%; }
+    a { color: inherit; text-decoration: none; }
+    button { font-family: inherit; border: none; background: transparent; }
+    ul { list-style: none; }
+
+    /* Skip link for accessibility */
+    .skip-link {
+      position: absolute;
+      top: -100%;
+      left: 8px;
+      padding: 8px 16px;
+      background: var(--aurora);
+      color: var(--void);
+      font-size: 0.8rem;
+      font-weight: 700;
+      z-index: 10000;
+      transition: top 0.2s;
+    }
+    .skip-link:focus { top: 8px; }
+
+    /* ============================================================
+       CUSTOM CURSOR (fine-pointer / mouse only)
+    ============================================================ */
+    #cursor,
+    #cursor-ring {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      pointer-events: none;
+      z-index: 9999;
+      will-change: transform;
+      transform: translate(-50%, -50%);
+    }
+    #cursor {
+      width: 10px; height: 10px;
+      background: var(--aurora);
+      border-radius: 50%;
+      mix-blend-mode: screen;
+    }
+    #cursor-ring {
+      width: 34px; height: 34px;
+      border: 1px solid rgba(79, 195, 247, 0.45);
+      border-radius: 50%;
+      transition: width .25s var(--ease-out-expo),
+                  height .25s var(--ease-out-expo),
+                  border-color .25s;
+    }
+    #cursor.hovering { width: 16px; height: 16px; }
+    #cursor-ring.hovering { width: 52px; height: 52px; border-color: var(--aurora); }
+
+    @media (pointer: fine) {
+      #cursor, #cursor-ring { display: block; }
+    }
+
+    /* ============================================================
+       CANVAS STARFIELD
+    ============================================================ */
+    #starfield-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Nebula glow layers */
+    .nebula-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse 70% 55% at 18% 22%, rgba(0,229,204,.05) 0%, transparent 60%),
+        radial-gradient(ellipse 55% 70% at 82% 78%, rgba(79,195,247,.07) 0%, transparent 60%),
+        radial-gradient(ellipse 90% 35% at 50% 50%, rgba(255,107,107,.025) 0%, transparent 70%);
+    }
+
+    /* ============================================================
+       LAYOUT UTILITIES
+    ============================================================ */
+    .container {
+      position: relative;
+      z-index: 1;
+      padding-inline: clamp(24px, 5vw, 80px);
+    }
+    .section-label {
+      display: inline-block;
+      font-size: .6rem;
+      letter-spacing: .4em;
+      text-transform: uppercase;
+      color: var(--aurora);
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: clamp(2rem, 4.5vw, 3.8rem);
+      line-height: 1;
+      letter-spacing: -.02em;
+    }
+    .section-title em {
+      font-style: normal;
+      color: transparent;
+      -webkit-text-stroke: 1px rgba(79,195,247,.4);
+    }
+    .cosmic-divider {
+      position: relative;
+      z-index: 1;
+      height: 1px;
+      margin-inline: clamp(24px, 5vw, 80px);
+      background: linear-gradient(to right, transparent, rgba(79,195,247,.2), rgba(0,229,204,.3), rgba(79,195,247,.2), transparent);
+    }
+
+    /* ============================================================
+       BUTTONS
+    ============================================================ */
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 15px 38px;
+      background: linear-gradient(135deg, var(--glow), var(--aurora));
+      color: var(--void);
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: .82rem;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      clip-path: var(--radius-clip);
+      transition: transform .25s, box-shadow .25s;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 40px rgba(0,229,204,.45);
+    }
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 15px 38px;
+      border: 1px solid rgba(232,244,255,.18);
+      color: rgba(232,244,255,.65);
+      font-family: var(--font-body);
+      font-size: .75rem;
+      letter-spacing: .1em;
+      transition: border-color .25s, color .25s;
+    }
+    .btn-ghost:hover { border-color: var(--glow); color: var(--glow); }
+
+    /* ============================================================
+       NAV
+    ============================================================ */
+    #site-nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 200;
+      padding: 22px clamp(24px, 5vw, 80px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(to bottom, rgba(2,4,8,.92), transparent);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+    .nav-logo {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.35rem;
+      letter-spacing: .3em;
+    }
+    .nav-logo span { color: var(--aurora); }
+    .nav-links {
+      display: flex;
+      gap: 40px;
+    }
+    .nav-links a {
+      font-size: .68rem;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      transition: color .25s;
+    }
+    .nav-links a:hover,
+    .nav-links a[aria-current="page"] { color: var(--aurora); }
+    .nav-cta {
+      padding: 9px 22px;
+      border: 1px solid var(--aurora);
+      color: var(--aurora);
+      font-family: var(--font-body);
+      font-size: .68rem;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      transition: background .25s, color .25s;
+    }
+    .nav-cta:hover { background: var(--aurora); color: var(--void); }
+    .nav-mobile-btn {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      width: 28px;
+      background: transparent;
+      border: none;
+      padding: 4px;
+    }
+    .nav-mobile-btn span {
+      display: block;
+      height: 1px;
+      background: var(--star);
+      transition: transform .25s, opacity .25s;
+    }
+    @media (max-width: 768px) {
+      .nav-links, .nav-cta { display: none; }
+      .nav-mobile-btn { display: flex; }
+    }
+
+    /* ============================================================
+       HERO
+    ============================================================ */
+    #hero {
+      position: relative;
+      z-index: 1;
+      min-height: 100svh;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 40px;
+      padding-top: 110px;
+      padding-bottom: 80px;
+    }
+    .hero-body { max-width: 680px; }
+    .hero-eyebrow {
+      font-size: .62rem;
+      letter-spacing: .45em;
+      text-transform: uppercase;
+      color: var(--aurora);
+      margin-bottom: 28px;
+      opacity: 0;
+      animation: fadeUp .9s var(--ease-out-expo) .2s forwards;
+    }
+    .hero-title {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: clamp(3.6rem, 10vw, 9.5rem);
+      line-height: .88;
+      letter-spacing: -.025em;
+      margin-bottom: 36px;
+      opacity: 0;
+      animation: fadeUp .9s var(--ease-out-expo) .4s forwards;
+    }
+    .hero-title .outline {
+      display: block;
+      color: transparent;
+      -webkit-text-stroke: 1px rgba(79,195,247,.45);
+      padding-left: 1.8em;
+    }
+    .hero-title .gradient {
+      display: block;
+      background: linear-gradient(135deg, var(--glow) 30%, var(--aurora));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: clamp(1rem, 2vw, 1.35rem);
+      color: rgba(232,244,255,.48);
+      line-height: 1.75;
+      max-width: 440px;
+      margin-bottom: 48px;
+      opacity: 0;
+      animation: fadeUp .9s var(--ease-out-expo) .6s forwards;
+    }
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      opacity: 0;
+      animation: fadeUp .9s var(--ease-out-expo) .8s forwards;
+    }
+    .hero-social-proof {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 40px;
+      font-size: .62rem;
+      letter-spacing: .08em;
+      color: var(--muted);
+      opacity: 0;
+      animation: fadeUp .9s var(--ease-out-expo) 1s forwards;
+    }
+    .avatar-stack {
+      display: flex;
+    }
+    .avatar-stack .av {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      border: 2px solid var(--void);
+      background: linear-gradient(135deg, var(--glow), var(--aurora));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .55rem;
+      font-weight: 700;
+      color: var(--void);
+      margin-left: -8px;
+    }
+    .avatar-stack .av:first-child { margin-left: 0; }
+
+    /* Orbit widget */
+    .hero-orbit {
+      position: relative;
+      width: clamp(280px, 28vw, 520px);
+      aspect-ratio: 1;
+      flex-shrink: 0;
+      opacity: 0;
+      animation: fadeIn 1.4s var(--ease-out-expo) 1.1s forwards;
+    }
+    .orbit-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 1px solid rgba(79,195,247,.07);
+      animation: spin var(--spd, 30s) linear infinite var(--dir, normal);
+    }
+    .orbit-ring:nth-child(1) { inset: 10%; border-color: rgba(0,229,204,.12); --spd: 28s; }
+    .orbit-ring:nth-child(2) { inset: 22%; border-color: rgba(79,195,247,.09); --spd: 44s; --dir: reverse; }
+    .orbit-ring:nth-child(3) { inset: 34%; border-color: rgba(255,107,107,.06); --spd: 62s; }
+    .orbit-dot {
+      position: absolute;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      top: -4px; left: 50%;
+      transform: translateX(-50%);
+    }
+    .orbit-dot.aurora { background: var(--aurora); box-shadow: 0 0 14px var(--aurora); }
+    .orbit-dot.glow   { background: var(--glow);   box-shadow: 0 0 14px var(--glow);   top: auto; bottom: -4px; }
+    .orbit-dot.pulse  { background: var(--pulse);  box-shadow: 0 0 14px var(--pulse);  left: -4px; top: 50%; transform: translateY(-50%); }
+    .orbit-center {
+      position: absolute;
+      inset: 38%;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,229,204,.18), rgba(79,195,247,.06), transparent);
+      border: 1px solid rgba(0,229,204,.22);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: .55rem;
+      letter-spacing: .3em;
+      color: var(--aurora);
+      text-transform: uppercase;
+    }
+
+    /* Scroll hint */
+    .scroll-hint {
+      position: absolute;
+      bottom: 32px; left: 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: .58rem;
+      letter-spacing: .3em;
+      text-transform: uppercase;
+      color: var(--muted);
+      opacity: 0;
+      animation: fadeIn 1s ease 1.5s forwards;
+    }
+    .scroll-line {
+      width: 36px; height: 1px;
+      background: var(--muted);
+      overflow: hidden;
+      position: relative;
+    }
+    .scroll-line::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--aurora);
+      animation: scanLine 2s ease-in-out infinite;
+    }
+
+    @media (max-width: 900px) {
+      #hero { grid-template-columns: 1fr; }
+      .hero-orbit { display: none; }
+    }
+
+    /* ============================================================
+       STATS BAR
+    ============================================================ */
+    #stats {
+      position: relative;
+      z-index: 1;
+      padding: 28px clamp(24px, 5vw, 80px);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      background: rgba(6,13,26,.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-top: 1px solid rgba(232,244,255,.05);
+      border-bottom: 1px solid rgba(232,244,255,.05);
+    }
+    .stat-item {
+      padding: 0 24px;
+      border-right: 1px solid rgba(232,244,255,.05);
+    }
+    .stat-item:first-child { padding-left: 0; }
+    .stat-item:last-child { border-right: none; }
+    .stat-number {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      background: linear-gradient(135deg, var(--star), var(--glow));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .stat-label {
+      font-size: .58rem;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    @media (max-width: 640px) {
+      #stats { grid-template-columns: 1fr 1fr; gap: 24px; }
+      .stat-item { border-right: none; padding: 0; }
+    }
+
+    /* ============================================================
+       HOW IT WORKS
+    ============================================================ */
+    #how-it-works {
+      padding: 120px 0;
+    }
+    .how-header { margin-bottom: 80px; }
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+    }
+    .step-card {
+      padding: 48px 36px;
+      background: rgba(6,13,26,.6);
+      border: 1px solid rgba(79,195,247,.06);
+      position: relative;
+      overflow: hidden;
+      transition: background .3s, border-color .3s;
+    }
+    .step-card:hover {
+      background: rgba(13,32,64,.7);
+      border-color: rgba(0,229,204,.2);
+    }
+    .step-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 2px;
+      background: linear-gradient(to right, var(--aurora), transparent);
+      opacity: 0;
+      transition: opacity .3s;
+    }
+    .step-card:hover::before { opacity: 1; }
+    .step-number {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 4rem;
+      color: rgba(79,195,247,.08);
+      line-height: 1;
+      margin-bottom: 24px;
+    }
+    .step-icon {
+      font-size: 1.8rem;
+      margin-bottom: 20px;
+    }
+    .step-title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-bottom: 12px;
+    }
+    .step-desc {
+      font-size: .78rem;
+      line-height: 1.75;
+      color: rgba(232,244,255,.45);
+    }
+    .step-tag {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 5px 12px;
+      background: rgba(0,229,204,.07);
+      border: 1px solid rgba(0,229,204,.2);
+      color: var(--aurora);
+      font-size: .58rem;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+    @media (max-width: 768px) {
+      .steps-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ============================================================
+       JOURNALS FEED
+    ============================================================ */
+    #journals { padding: 120px 0; }
+    .journals-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 56px;
+    }
+    .view-all {
+      font-size: .62rem;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: var(--aurora);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: gap .3s;
+    }
+    .view-all:hover { gap: 16px; }
+    .view-all::after { content: '→'; }
+
+    .journal-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 1fr;
+      grid-template-rows: auto auto;
+      gap: 2px;
+    }
+    .journal-card {
+      position: relative;
+      overflow: hidden;
+      background: var(--deep);
+      transition: transform .4s var(--ease-out-expo);
+    }
+    .journal-card:hover { transform: scale(1.012); z-index: 2; }
+    .journal-card:focus-within { outline: 2px solid var(--aurora); outline-offset: 2px; }
+    .journal-card.featured { grid-row: span 2; }
+
+    /* CSS landscape scenes */
+    .card-scene {
+      width: 100%;
+      min-height: 280px;
+      position: relative;
+      overflow: hidden;
+    }
+    .journal-card.featured .card-scene { min-height: 600px; }
+
+    .scene-patagonia {
+      background: linear-gradient(to bottom, #020d1f 0%, #041224 40%, #071a32 70%, #0a2040 100%);
+    }
+    .scene-patagonia::before { /* mountains */
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0; height: 50%;
+      background: linear-gradient(to top, rgba(0,229,204,.1), transparent);
+      clip-path: polygon(0 70%,8% 45%,16% 58%,28% 22%,40% 50%,52% 28%,66% 52%,78% 34%,88% 55%,100% 38%,100% 100%,0 100%);
+    }
+    .scene-patagonia::after { /* aurora glow */
+      content: '';
+      position: absolute;
+      top: 10%; left: 0; right: 0; height: 40%;
+      background: radial-gradient(ellipse 80% 40% at 50% 0%, rgba(0,229,204,.12), transparent 70%);
+    }
+
+    .scene-sahara {
+      background: linear-gradient(to bottom, #0a0414 0%, #140820 50%, #1a0a2e 100%);
+    }
+    .scene-sahara::before { /* sun */
+      content: '';
+      position: absolute;
+      top: 28%; left: 50%; transform: translateX(-50%);
+      width: 60px; height: 60px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,107,107,.7) 0%, rgba(255,107,107,.2) 50%, transparent 70%);
+      box-shadow: 0 0 60px rgba(255,107,107,.3);
+    }
+    .scene-sahara::after { /* dunes */
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0; height: 40%;
+      background: linear-gradient(to top, rgba(255,107,107,.06), transparent);
+      clip-path: polygon(0 80%,20% 55%,40% 70%,60% 45%,80% 65%,100% 40%,100% 100%,0 100%);
+    }
+
+    .scene-hokkaido {
+      background: linear-gradient(160deg, #020810 0%, #040e1e 50%, #060c18 100%);
+    }
+    .scene-hokkaido::before {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0; height: 55%;
+      background: linear-gradient(to top, rgba(79,195,247,.07), transparent);
+      clip-path: polygon(0 75%,12% 48%,24% 62%,38% 28%,52% 52%,68% 20%,82% 44%,100% 28%,100% 100%,0 100%);
+    }
+    .scene-hokkaido::after {
+      content: '';
+      position: absolute;
+      top: 20%; right: 20%;
+      width: 50px; height: 50px;
+      border-radius: 50%;
+      background: rgba(232,244,255,.08);
+      box-shadow: 0 0 30px rgba(232,244,255,.06);
+    }
+
+    .scene-fjord {
+      background: linear-gradient(to bottom right, #020d14, #041822);
+    }
+    .scene-fjord::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 4px, rgba(0,229,204,.015) 4px, rgba(0,229,204,.015) 5px);
+    }
+    .scene-fjord::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0; height: 45%;
+      background: linear-gradient(to top, rgba(79,195,247,.08), transparent);
+      clip-path: polygon(0 60%,15% 35%,30% 55%,45% 25%,60% 48%,75% 18%,90% 42%,100% 28%,100% 100%,0 100%);
+    }
+
+    /* Starfield layer on each scene */
+    .scene-stars {
+      position: absolute;
+      inset: 0;
+      background-image:
+        radial-gradient(1px 1px at 15% 12%, rgba(255,255,255,.6) 0%, transparent 100%),
+        radial-gradient(1px 1px at 42% 8%,  rgba(255,255,255,.4) 0%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 68% 18%, rgba(255,255,255,.7) 0%, transparent 100%),
+        radial-gradient(1px 1px at 85% 6%,  rgba(255,255,255,.3) 0%, transparent 100%),
+        radial-gradient(1px 1px at 25% 25%, rgba(255,255,255,.5) 0%, transparent 100%),
+        radial-gradient(1px 1px at 55% 22%, rgba(255,255,255,.4) 0%, transparent 100%),
+        radial-gradient(1px 1px at 78% 30%, rgba(255,255,255,.35) 0%, transparent 100%);
+    }
+
+    .card-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(2,4,8,.96) 0%, rgba(2,4,8,.35) 55%, transparent 100%);
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+    .card-tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border: 1px solid rgba(0,229,204,.3);
+      color: var(--aurora);
+      font-size: .54rem;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      width: fit-content;
+    }
+    .card-title {
+      font-family: var(--font-serif);
+      font-size: 1.2rem;
+      line-height: 1.35;
+      color: var(--star);
+    }
+    .journal-card.featured .card-title { font-size: 1.85rem; }
+    .card-excerpt {
+      font-size: .7rem;
+      line-height: 1.7;
+      color: rgba(232,244,255,.38);
+      margin-top: 8px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .card-author {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .author-av {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--glow), var(--aurora));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .6rem;
+      font-weight: 700;
+      color: var(--void);
+      flex-shrink: 0;
+    }
+    .author-meta { font-size: .6rem; color: var(--muted); }
+    .author-name { color: rgba(232,244,255,.7); margin-bottom: 2px; }
+    .match-badge {
+      position: absolute;
+      top: 14px; right: 14px;
+      padding: 5px 11px;
+      background: rgba(0,229,204,.1);
+      border: 1px solid rgba(0,229,204,.28);
+      backdrop-filter: blur(8px);
+      font-size: .53rem;
+      letter-spacing: .1em;
+      color: var(--aurora);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .match-pip {
+      width: 5px; height: 5px;
+      background: var(--aurora);
+      border-radius: 50%;
+      animation: pip 2s ease-in-out infinite;
+    }
+    @media (max-width: 768px) {
+      .journal-grid { grid-template-columns: 1fr; }
+      .journal-card.featured { grid-row: auto; }
+      .journal-card.featured .card-scene { min-height: 320px; }
+    }
+
+    /* ============================================================
+       AI MATCHING
+    ============================================================ */
+    #ai-matching { padding: 120px 0; }
+    .ai-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+    }
+
+    /* Network viz */
+    .ai-network {
+      position: relative;
+      height: 480px;
+    }
+    .ai-orb {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 180px; height: 180px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,229,204,.28), rgba(79,195,247,.08), transparent 70%);
+      animation: orbBreath 4s ease-in-out infinite;
+    }
+    .ai-orb-label {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: .6rem;
+      letter-spacing: .25em;
+      color: var(--aurora);
+      text-transform: uppercase;
+    }
+    .network-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      overflow: visible;
+    }
+    .net-line {
+      stroke-dasharray: 4 6;
+      animation: dashFlow 3s linear infinite;
+    }
+    .net-node {
+      cursor: default;
+      transition: r .2s;
+    }
+    .net-node:hover { r: 7; }
+    .net-pulse {
+      animation: netPulse 3s ease-in-out infinite;
+    }
+
+    /* Matcher UI */
+    .ai-content-head { margin-bottom: 28px; }
+    .ai-desc {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 1.1rem;
+      line-height: 1.75;
+      color: rgba(232,244,255,.45);
+      margin-bottom: 36px;
+    }
+    .match-list { display: flex; flex-direction: column; gap: 10px; }
+    .match-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px;
+      background: rgba(13,32,64,.55);
+      border: 1px solid rgba(79,195,247,.07);
+      transition: background .3s, border-color .3s, transform .3s;
+    }
+    .match-row:hover {
+      background: rgba(0,229,204,.05);
+      border-color: rgba(0,229,204,.28);
+      transform: translateX(6px);
+    }
+    .match-av {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: .75rem;
+      color: var(--void);
+    }
+    .match-info { flex: 1; }
+    .match-name {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: .83rem;
+      margin-bottom: 2px;
+    }
+    .match-route { font-size: .58rem; letter-spacing: .08em; color: var(--muted); }
+    .match-pct {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--aurora);
+    }
+    .connect-btn {
+      padding: 6px 14px;
+      border: 1px solid rgba(0,229,204,.28);
+      color: var(--aurora);
+      font-size: .58rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      transition: background .2s;
+    }
+    .connect-btn:hover { background: rgba(0,229,204,.12); }
+    @media (max-width: 900px) {
+      .ai-grid { grid-template-columns: 1fr; }
+      .ai-network { height: 280px; }
+    }
+
+    /* ============================================================
+       TESTIMONIALS
+    ============================================================ */
+    #testimonials { padding: 120px 0; }
+    .testi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      margin-top: 64px;
+    }
+    .testi-card {
+      padding: 40px 32px;
+      background: rgba(6,13,26,.7);
+      border: 1px solid rgba(79,195,247,.06);
+      position: relative;
+    }
+    .testi-card::before {
+      content: '"';
+      position: absolute;
+      top: 24px; left: 28px;
+      font-family: var(--font-serif);
+      font-size: 5rem;
+      line-height: 1;
+      color: rgba(0,229,204,.12);
+    }
+    .testi-quote {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 1rem;
+      line-height: 1.75;
+      color: rgba(232,244,255,.6);
+      margin-bottom: 28px;
+      position: relative;
+      z-index: 1;
+    }
+    .testi-author {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .testi-av {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: .7rem;
+      color: var(--void);
+    }
+    .testi-name {
+      font-family: var(--font-display);
+      font-size: .8rem;
+      font-weight: 600;
+    }
+    .testi-meta { font-size: .58rem; color: var(--muted); margin-top: 2px; }
+    .testi-stars { color: var(--gold); font-size: .75rem; margin-bottom: 16px; }
+    @media (max-width: 768px) {
+      .testi-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ============================================================
+       WORLD MAP
+    ============================================================ */
+    #world-map { padding: 120px 0; }
+    .map-container {
+      margin-top: 56px;
+      position: relative;
+      background: rgba(6,13,26,.8);
+      border: 1px solid rgba(79,195,247,.08);
+      overflow: hidden;
+    }
+    .map-svg-wrap {
+      position: relative;
+      padding: 24px;
+    }
+    .map-overlay-label {
+      position: absolute;
+      top: 20px; left: 20px;
+      font-size: .58rem;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: var(--aurora);
+      background: rgba(2,4,8,.7);
+      padding: 6px 12px;
+      border: 1px solid rgba(0,229,204,.2);
+    }
+    .map-pin {
+      cursor: default;
+      transition: r .2s;
+    }
+    .map-pin-outer {
+      fill: none;
+      stroke: var(--aurora);
+      animation: pinPulse 2.5s ease-in-out infinite;
+    }
+    .map-stat-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border-top: 1px solid rgba(79,195,247,.06);
+    }
+    .map-stat {
+      padding: 20px 24px;
+      border-right: 1px solid rgba(79,195,247,.06);
+    }
+    .map-stat:last-child { border-right: none; }
+    .map-stat-n {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.2rem;
+      color: var(--aurora);
+    }
+    .map-stat-l { font-size: .58rem; letter-spacing: .12em; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
+    @media (max-width: 640px) {
+      .map-stat-row { grid-template-columns: 1fr 1fr; }
+      .map-stat:nth-child(2) { border-right: none; }
+    }
+
+    /* ============================================================
+       JOURNAL TIMELINE
+    ============================================================ */
+    #timeline { padding: 120px 0; }
+    .timeline-track {
+      position: relative;
+      margin-top: 64px;
+      padding-left: 32px;
+    }
+    .timeline-track::before {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0; left: 0;
+      width: 1px;
+      background: linear-gradient(to bottom, transparent, rgba(0,229,204,.3), rgba(79,195,247,.2), transparent);
+    }
+    .timeline-entry {
+      position: relative;
+      margin-bottom: 56px;
+      padding-left: 28px;
+      opacity: 0;
+      transform: translateX(-12px);
+      transition: opacity .6s, transform .6s;
+    }
+    .timeline-entry.visible { opacity: 1; transform: none; }
+    .timeline-dot {
+      position: absolute;
+      left: -36px;
+      top: 4px;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--aurora);
+      box-shadow: 0 0 12px var(--aurora);
+    }
+    .timeline-date {
+      font-size: .58rem;
+      letter-spacing: .2em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .timeline-location {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: .78rem;
+      color: var(--aurora);
+      letter-spacing: .1em;
+      margin-bottom: 8px;
+    }
+    .timeline-text {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 1rem;
+      line-height: 1.75;
+      color: rgba(232,244,255,.55);
+      max-width: 560px;
+    }
+    .timeline-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .timeline-tag {
+      padding: 3px 10px;
+      background: rgba(79,195,247,.07);
+      border: 1px solid rgba(79,195,247,.12);
+      font-size: .54rem;
+      letter-spacing: .1em;
+      color: var(--glow);
+      text-transform: uppercase;
+    }
+
+    /* ============================================================
+       SEARCH / DISCOVERY
+    ============================================================ */
+    #discover { padding: 120px 0; }
+    .discover-inner {
+      background: rgba(6,13,26,.7);
+      border: 1px solid rgba(79,195,247,.08);
+      padding: 56px 48px;
+      position: relative;
+    }
+    .discover-inner::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 100px; height: 2px;
+      background: linear-gradient(to right, var(--aurora), transparent);
+    }
+    .search-row {
+      display: flex;
+      gap: 0;
+      margin-top: 36px;
+      margin-bottom: 40px;
+    }
+    .search-input {
+      flex: 1;
+      padding: 16px 24px;
+      background: rgba(2,4,8,.8);
+      border: 1px solid rgba(79,195,247,.14);
+      border-right: none;
+      color: var(--star);
+      font-family: var(--font-body);
+      font-size: .8rem;
+      outline: none;
+      transition: border-color .25s;
+    }
+    .search-input::placeholder { color: var(--muted); }
+    .search-input:focus { border-color: rgba(0,229,204,.4); }
+    .search-btn {
+      padding: 16px 28px;
+      background: linear-gradient(135deg, var(--glow), var(--aurora));
+      color: var(--void);
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: .72rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      border: none;
+      white-space: nowrap;
+    }
+    .discover-tags { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 36px; }
+    .discover-tag {
+      padding: 7px 16px;
+      border: 1px solid rgba(79,195,247,.12);
+      background: rgba(79,195,247,.04);
+      color: rgba(232,244,255,.5);
+      font-size: .62rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      transition: all .25s;
+    }
+    .discover-tag:hover,
+    .discover-tag.active {
+      border-color: var(--aurora);
+      color: var(--aurora);
+      background: rgba(0,229,204,.08);
+    }
+    .discover-results {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .result-card {
+      padding: 18px;
+      background: rgba(2,4,8,.6);
+      border: 1px solid rgba(79,195,247,.06);
+      transition: border-color .25s;
+    }
+    .result-card:hover { border-color: rgba(0,229,204,.25); }
+    .result-loc {
+      font-size: .55rem;
+      letter-spacing: .15em;
+      color: var(--aurora);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .result-title {
+      font-family: var(--font-serif);
+      font-size: .9rem;
+      line-height: 1.45;
+      color: rgba(232,244,255,.8);
+      margin-bottom: 10px;
+    }
+    .result-meta { font-size: .58rem; color: var(--muted); }
+    @media (max-width: 640px) {
+      .discover-results { grid-template-columns: 1fr; }
+      .search-row { flex-direction: column; }
+      .search-input { border-right: 1px solid rgba(79,195,247,.14); border-bottom: none; }
+    }
+
+    /* ============================================================
+       WRITE / CTA
+    ============================================================ */
+    #write { padding: 120px 0; }
+    .write-center { max-width: 720px; margin: 0 auto; text-align: center; }
+    .write-center .section-title { font-size: clamp(2.5rem, 5.5vw, 4.5rem); margin-bottom: 24px; }
+    .write-desc {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 1.15rem;
+      color: rgba(232,244,255,.42);
+      line-height: 1.75;
+      margin-bottom: 52px;
+    }
+    .journal-composer {
+      background: rgba(6,13,26,.8);
+      border: 1px solid rgba(79,195,247,.1);
+      padding: 32px;
+      margin-bottom: 24px;
+      text-align: left;
+      position: relative;
+    }
+    .journal-composer::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 80px; height: 2px;
+      background: linear-gradient(to right, var(--aurora), transparent);
+    }
+    .composer-label {
+      font-size: .54rem;
+      letter-spacing: .3em;
+      text-transform: uppercase;
+      color: var(--aurora);
+      margin-bottom: 14px;
+    }
+    .composer-ta {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--star);
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 1.05rem;
+      line-height: 1.8;
+      resize: none;
+      min-height: 130px;
+    }
+    .composer-ta::placeholder { color: rgba(74,96,128,.45); }
+    .ai-hint {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 14px 16px;
+      background: rgba(0,229,204,.04);
+      border-left: 2px solid var(--aurora);
+      font-size: .75rem;
+      color: rgba(232,244,255,.48);
+      line-height: 1.65;
+      margin-top: 16px;
+    }
+    .ai-hint-icon { color: var(--aurora); flex-shrink: 0; font-size: .9rem; margin-top: 1px; }
+    .write-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+    /* ============================================================
+       PRICING
+    ============================================================ */
+    #pricing { padding: 120px 0; }
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      margin-top: 64px;
+    }
+    .price-card {
+      padding: 48px 36px;
+      background: rgba(6,13,26,.6);
+      border: 1px solid rgba(79,195,247,.06);
+      position: relative;
+      transition: background .3s, border-color .3s;
+    }
+    .price-card.featured-plan {
+      background: rgba(13,32,64,.8);
+      border-color: rgba(0,229,204,.25);
+    }
+    .price-card.featured-plan::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(to right, var(--aurora), var(--glow));
+    }
+    .plan-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      background: rgba(0,229,204,.12);
+      border: 1px solid rgba(0,229,204,.3);
+      color: var(--aurora);
+      font-size: .55rem;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+    .plan-name {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+    }
+    .plan-price {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 3rem;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .plan-price sup { font-size: 1.2rem; vertical-align: super; }
+    .plan-price sub { font-size: .9rem; font-weight: 400; color: var(--muted); }
+    .plan-desc { font-size: .72rem; color: var(--muted); line-height: 1.6; margin-bottom: 32px; }
+    .plan-features { list-style: none; margin-bottom: 36px; }
+    .plan-features li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: .72rem;
+      line-height: 1.6;
+      color: rgba(232,244,255,.6);
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(79,195,247,.05);
+    }
+    .plan-features li::before { content: '◈'; color: var(--aurora); font-size: .65rem; flex-shrink: 0; }
+    @media (max-width: 768px) {
+      .pricing-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ============================================================
+       APP PREVIEW
+    ============================================================ */
+    #app-preview { padding: 120px 0; }
+    .app-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+      margin-top: 64px;
+    }
+    .app-phone-wrap {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+    }
+    .phone-shell {
+      width: 200px;
+      border-radius: 28px;
+      border: 2px solid rgba(79,195,247,.15);
+      background: rgba(6,13,26,.9);
+      overflow: hidden;
+      position: relative;
+    }
+    .phone-shell:nth-child(2) { margin-top: 32px; }
+    .phone-top {
+      height: 24px;
+      background: rgba(2,4,8,.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .phone-notch {
+      width: 60px; height: 10px;
+      background: rgba(2,4,8,1);
+      border-radius: 0 0 8px 8px;
+    }
+    .phone-screen { padding: 14px; }
+    .phone-ui-label {
+      font-size: .5rem;
+      letter-spacing: .15em;
+      color: var(--aurora);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .phone-ui-text {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: .65rem;
+      line-height: 1.55;
+      color: rgba(232,244,255,.5);
+      margin-bottom: 10px;
+    }
+    .phone-ui-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border: 1px solid rgba(0,229,204,.3);
+      color: var(--aurora);
+      font-size: .48rem;
+      letter-spacing: .1em;
+    }
+    .phone-ui-match {
+      margin-top: 10px;
+      padding: 8px;
+      background: rgba(0,229,204,.06);
+      border: 1px solid rgba(0,229,204,.15);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .phone-ui-av {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--glow), var(--aurora));
+      flex-shrink: 0;
+    }
+    .phone-ui-matchtext { font-size: .52rem; color: rgba(232,244,255,.5); }
+    .phone-ui-pct { font-family: var(--font-display); font-size: .7rem; font-weight: 700; color: var(--aurora); margin-left: auto; }
+    .app-content h2 { margin-bottom: 20px; }
+    .app-list { margin-top: 32px; display: flex; flex-direction: column; gap: 18px; }
+    .app-feature { display: flex; gap: 14px; }
+    .app-feature-icon {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: rgba(0,229,204,.08);
+      border: 1px solid rgba(0,229,204,.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .app-feature-text h4 {
+      font-family: var(--font-display);
+      font-size: .85rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .app-feature-text p { font-size: .7rem; line-height: 1.6; color: var(--muted); }
+    .app-store-row { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 36px; }
+    .store-btn {
+      padding: 12px 22px;
+      border: 1px solid rgba(79,195,247,.2);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: border-color .25s, background .25s;
+    }
+    .store-btn:hover { border-color: var(--aurora); background: rgba(0,229,204,.05); }
+    .store-icon { font-size: 1.4rem; }
+    .store-text small { display: block; font-size: .5rem; letter-spacing: .1em; color: var(--muted); text-transform: uppercase; }
+    .store-text strong { font-family: var(--font-display); font-size: .82rem; }
+    @media (max-width: 900px) {
+      .app-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ============================================================
+       FOOTER
+    ============================================================ */
+    footer {
+      position: relative;
+      z-index: 1;
+      padding: 64px clamp(24px, 5vw, 80px) 32px;
+      border-top: 1px solid rgba(232,244,255,.05);
+    }
+    .footer-top {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr 1fr 1fr;
+      gap: 48px;
+      margin-bottom: 64px;
+    }
+    .footer-brand p {
+      font-size: .75rem;
+      line-height: 1.7;
+      color: var(--muted);
+      margin-top: 14px;
+      max-width: 260px;
+    }
+    .footer-logo {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.3rem;
+      letter-spacing: .3em;
+    }
+    .footer-logo span { color: var(--aurora); }
+    .footer-col h4 {
+      font-family: var(--font-display);
+      font-size: .72rem;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: rgba(232,244,255,.5);
+      margin-bottom: 20px;
+    }
+    .footer-col ul { display: flex; flex-direction: column; gap: 12px; }
+    .footer-col a { font-size: .72rem; color: var(--muted); transition: color .25s; }
+    .footer-col a:hover { color: var(--aurora); }
+    .footer-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 28px;
+      border-top: 1px solid rgba(232,244,255,.04);
+      font-size: .6rem;
+      letter-spacing: .1em;
+      color: var(--muted);
+    }
+    @media (max-width: 768px) {
+      .footer-top { grid-template-columns: 1fr 1fr; }
+      .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
+    }
+    @media (max-width: 480px) {
+      .footer-top { grid-template-columns: 1fr; }
+    }
+
+    /* ============================================================
+       ANIMATIONS
+    ============================================================ */
+    @keyframes fadeUp   { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: none; } }
+    @keyframes fadeIn   { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes spin     { to { transform: rotate(360deg); } }
+    @keyframes orbBreath {
+      0%,100% { transform: translate(-50%,-50%) scale(1); box-shadow: 0 0 60px rgba(0,229,204,.18); }
+      50%     { transform: translate(-50%,-50%) scale(1.08); box-shadow: 0 0 100px rgba(0,229,204,.3); }
+    }
+    @keyframes scanLine { 0% { transform: translateX(-100%); } 100% { transform: translateX(220%); } }
+    @keyframes pip      { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.35; transform:scale(.75); } }
+    @keyframes dashFlow { to { stroke-dashoffset: -40; } }
+    @keyframes pinPulse {
+      0%,100% { r: 6; opacity: .5; }
+      50%     { r: 10; opacity: .15; }
+    }
+    @keyframes netPulse {
+      0%,100% { opacity: .4; }
+      50%     { opacity: 1; }
+    }
+
+    /* Scroll reveal baseline */
+    .reveal {
+      opacity: 0;
+      transform: translateY(22px);
+      transition: opacity .75s var(--ease-out-expo), transform .75s var(--ease-out-expo);
+    }
+    .reveal.visible { opacity: 1; transform: none; }
+    .reveal-delay-1 { transition-delay: .1s; }
+    .reveal-delay-2 { transition-delay: .2s; }
+    .reveal-delay-3 { transition-delay: .3s; }
+  </style>
+</head>
+
+<body>
+  <!-- Accessibility skip link -->
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <!-- Custom cursor (fine-pointer only) -->
+  <div id="cursor" aria-hidden="true"></div>
+  <div id="cursor-ring" aria-hidden="true"></div>
+
+  <!-- Starfield canvas -->
+  <canvas id="starfield-canvas" aria-hidden="true"></canvas>
+  <div class="nebula-bg" aria-hidden="true"></div>
+
+  <!-- ── NAV ─────────────────────────────────────────────────── -->
+  <header role="banner">
+    <nav id="site-nav" aria-label="Main navigation">
+      <a href="#" class="nav-logo" aria-label="VOYA home">VOY<span>A</span></a>
+      <ul class="nav-links" role="list">
+        <li><a href="#how-it-works">How It Works</a></li>
+        <li><a href="#journals">Journals</a></li>
+        <li><a href="#ai-matching">AI Matching</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+      </ul>
+      <a href="#write" class="nav-cta" aria-label="Start your journey">Begin Journey</a>
+      <button class="nav-mobile-btn" aria-label="Open menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </nav>
+  </header>
+
+  <!-- ── MAIN ─────────────────────────────────────────────────── -->
+  <main id="main-content">
+
+    <!-- HERO -->
+    <section id="hero" class="container" aria-labelledby="hero-heading">
+      <div class="hero-body">
+        <p class="hero-eyebrow" aria-hidden="true">✦ A New Kind of Travel Journal</p>
+        <h1 class="hero-title" id="hero-heading">
+          Every Path
+          <span class="outline" aria-hidden="true">Is A</span>
+          <span class="gradient">Universe.</span>
+        </h1>
+        <p class="hero-sub">Share your world explorations. Discover travelers who've walked the same invisible roads. Let AI find the ones who understand your wandering.</p>
+        <div class="hero-actions">
+          <a href="#write" class="btn-primary">Start Your Journal</a>
+          <a href="#journals" class="btn-ghost">Explore Stories</a>
+        </div>
+        <div class="hero-social-proof" aria-label="94,000 wanderers have joined">
+          <div class="avatar-stack" aria-hidden="true">
+            <div class="av">MR</div><div class="av">KO</div><div class="av">YT</div><div class="av">EL</div>
+          </div>
+          <span>Joined by <strong style="color:var(--star)">94,000+</strong> wanderers worldwide</span>
+        </div>
+      </div>
+      <div class="hero-orbit" aria-hidden="true">
+        <div class="orbit-ring" style="--spd:28s"><div class="orbit-dot aurora"></div></div>
+        <div class="orbit-ring" style="--spd:44s;--dir:reverse"><div class="orbit-dot glow"></div></div>
+        <div class="orbit-ring" style="--spd:62s"><div class="orbit-dot pulse"></div></div>
+        <div class="orbit-center">Your World</div>
+      </div>
+      <div class="scroll-hint" aria-hidden="true">
+        <div class="scroll-line"></div>
+        Scroll to explore
+      </div>
+    </section>
+
+    <!-- STATS BAR -->
+    <div id="stats" role="region" aria-label="Platform statistics">
+      <div class="stat-item">
+        <div class="stat-number" aria-label="94 thousand">94K</div>
+        <div class="stat-label">Journeys Shared</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">147</div>
+        <div class="stat-label">Countries Explored</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number" aria-label="38 thousand">38K</div>
+        <div class="stat-label">Soul Connections Made</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">∞</div>
+        <div class="stat-label">Unknown Still Ahead</div>
+      </div>
+    </div>
+
+    <!-- HOW IT WORKS -->
+    <section id="how-it-works" class="container" aria-labelledby="how-heading">
+      <div class="how-header reveal">
+        <p class="section-label">✦ The Process</p>
+        <h2 class="section-title" id="how-heading">How VOYA<br>brings paths <em>together</em></h2>
+      </div>
+      <div class="steps-grid" role="list">
+        <article class="step-card reveal reveal-delay-1" role="listitem">
+          <div class="step-number" aria-hidden="true">01</div>
+          <div class="step-icon" aria-hidden="true">✍️</div>
+          <h3 class="step-title">Write Your Journey</h3>
+          <p class="step-desc">Open your journal and write freely — a moment, a place, a feeling that cracked you open. Our AI reads the texture of your words, not just the destination.</p>
+          <span class="step-tag">Free-form Writing</span>
+        </article>
+        <article class="step-card reveal reveal-delay-2" role="listitem">
+          <div class="step-number" aria-hidden="true">02</div>
+          <div class="step-icon" aria-hidden="true">◈</div>
+          <h3 class="step-title">AI Understands Your Path</h3>
+          <p class="step-desc">VOYA's AI analyzes themes of wonder, solitude, transformation, and curiosity — building a unique Soul Map of your wandering style that goes beyond GPS coordinates.</p>
+          <span class="step-tag">Semantic AI</span>
+        </article>
+        <article class="step-card reveal reveal-delay-3" role="listitem">
+          <div class="step-number" aria-hidden="true">03</div>
+          <div class="step-icon" aria-hidden="true">🌐</div>
+          <h3 class="step-title">Meet Your Travelers</h3>
+          <p class="step-desc">Discover people whose journeys rhyme with yours — not just same routes, but same spirit. Start conversations, share chapters, and build friendships that span continents.</p>
+          <span class="step-tag">Soul Matching</span>
+        </article>
+      </div>
+    </section>
+
+    <div class="cosmic-divider"></div>
+
+    <!-- JOURNALS FEED -->
+    <section id="journals" class="container" aria-labelledby="journals-heading">
+      <div class="journals-header">
+        <div class="reveal">
+          <p class="section-label">✦ Recent Transmissions</p>
+          <h2 class="section-title" id="journals-heading">Stories from<br>the <em>Edge</em></h2>
+        </div>
+        <a href="#" class="view-all reveal">All Journals</a>
+      </div>
+
+      <div class="journal-grid" role="list">
+        <article class="journal-card featured reveal" role="listitem" aria-labelledby="story1-title">
+          <div class="card-scene scene-patagonia" role="img" aria-label="Patagonia starry mountain landscape">
+            <div class="scene-stars" aria-hidden="true"></div>
+          </div>
+          <div class="card-overlay">
+            <span class="card-tag">Northern Patagonia</span>
+            <h3 class="card-title" id="story1-title">At the edge of the map, I finally stopped asking where I was going.</h3>
+            <p class="card-excerpt">Three weeks into the Torres del Paine circuit, my compass became irrelevant. Not broken — irrelevant. The mountains had their own grammar and I was learning to read it...</p>
+            <div class="card-author">
+              <div class="author-av" aria-hidden="true">MR</div>
+              <div class="author-meta">
+                <div class="author-name">Mira Reyes</div>
+                <div>42 travelers on a similar path</div>
+              </div>
+            </div>
+          </div>
+          <div class="match-badge" aria-label="98% path match">
+            <div class="match-pip" aria-hidden="true"></div>98% Path Match
+          </div>
+        </article>
+
+        <article class="journal-card reveal reveal-delay-1" role="listitem" aria-labelledby="story2-title">
+          <div class="card-scene scene-sahara" role="img" aria-label="Sahara desert sunset landscape">
+            <div class="scene-stars" aria-hidden="true"></div>
+          </div>
+          <div class="card-overlay">
+            <span class="card-tag">Sahara, Morocco</span>
+            <h3 class="card-title" id="story2-title">The desert taught me silence has a sound.</h3>
+            <div class="card-author">
+              <div class="author-av" style="background:linear-gradient(135deg,#ff6b6b,#ffd54f)" aria-hidden="true">KO</div>
+              <div class="author-meta">
+                <div class="author-name">Kofi Owusu</div>
+                <div>17 travelers matched</div>
+              </div>
+            </div>
+          </div>
+          <div class="match-badge" aria-label="91% soul match"><div class="match-pip" aria-hidden="true"></div>91% Soul Match</div>
+        </article>
+
+        <article class="journal-card reveal reveal-delay-2" role="listitem" aria-labelledby="story3-title">
+          <div class="card-scene scene-hokkaido" role="img" aria-label="Hokkaido winter night landscape">
+            <div class="scene-stars" aria-hidden="true"></div>
+          </div>
+          <div class="card-overlay">
+            <span class="card-tag">Hokkaido, Japan</span>
+            <h3 class="card-title" id="story3-title">I went to see the snow. I stayed for the stillness.</h3>
+            <div class="card-author">
+              <div class="author-av" style="background:linear-gradient(135deg,#4fc3f7,#7c4dff)" aria-hidden="true">YT</div>
+              <div class="author-meta">
+                <div class="author-name">Yuki Tanaka</div>
+                <div>29 travelers matched</div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="journal-card reveal reveal-delay-3" role="listitem" aria-labelledby="story4-title">
+          <div class="card-scene scene-fjord" role="img" aria-label="Norwegian fjord night landscape">
+            <div class="scene-stars" aria-hidden="true"></div>
+          </div>
+          <div class="card-overlay">
+            <span class="card-tag">Norwegian Fjords</span>
+            <h3 class="card-title" id="story4-title">The fjord held my reflection longer than any mirror.</h3>
+            <div class="card-author">
+              <div class="author-av" style="background:linear-gradient(135deg,#00e5cc,#4fc3f7)" aria-hidden="true">EL</div>
+              <div class="author-meta">
+                <div class="author-name">Elif Lund</div>
+                <div>55 travelers matched</div>
+              </div>
+            </div>
+          </div>
+          <div class="match-badge" aria-label="94% path match"><div class="match-pip" aria-hidden="true"></div>94% Path Match</div>
+        </article>
+      </div>
+    </section>
+
+    <div class="cosmic-divider"></div>
+
+    <!-- AI MATCHING -->
+    <section id="ai-matching" class="container" aria-labelledby="ai-heading">
+      <div class="ai-grid">
+        <div class="ai-network reveal" aria-hidden="true">
+          <svg class="network-svg" viewBox="0 0 480 480">
+            <!-- connection lines -->
+            <line class="net-line" x1="100" y1="80"  x2="240" y2="240" stroke="rgba(0,229,204,.2)"  stroke-width="1" stroke-dashoffset="0"/>
+            <line class="net-line" x1="380" y1="100" x2="240" y2="240" stroke="rgba(79,195,247,.2)" stroke-width="1" stroke-dashoffset="10"/>
+            <line class="net-line" x1="80"  y1="380" x2="240" y2="240" stroke="rgba(255,107,107,.15)" stroke-width="1" stroke-dashoffset="20"/>
+            <line class="net-line" x1="400" y1="360" x2="240" y2="240" stroke="rgba(255,213,79,.15)" stroke-width="1" stroke-dashoffset="5"/>
+            <line class="net-line" x1="60"  y1="220" x2="240" y2="240" stroke="rgba(0,229,204,.12)"  stroke-width="1" stroke-dashoffset="15"/>
+            <line class="net-line" x1="360" y1="60"  x2="240" y2="240" stroke="rgba(79,195,247,.12)" stroke-width="1" stroke-dashoffset="8"/>
+            <!-- secondary -->
+            <line x1="100" y1="80"  x2="380" y2="100" stroke="rgba(232,244,255,.03)" stroke-width="1"/>
+            <line x1="80"  y1="380" x2="400" y2="360" stroke="rgba(232,244,255,.03)" stroke-width="1"/>
+            <!-- nodes -->
+            <circle class="net-node net-pulse" cx="100" cy="80"  r="5" fill="var(--aurora)" style="--delay:0s"/>
+            <circle class="net-node net-pulse" cx="380" cy="100" r="5" fill="var(--gold)"   style="--delay:.5s"/>
+            <circle class="net-node net-pulse" cx="80"  cy="380" r="5" fill="var(--pulse)"  style="--delay:1s"/>
+            <circle class="net-node net-pulse" cx="400" cy="360" r="5" fill="var(--glow)"   style="--delay:1.5s"/>
+            <circle class="net-node net-pulse" cx="60"  cy="220" r="5" fill="var(--aurora)" style="--delay:.8s"/>
+            <circle class="net-node net-pulse" cx="360" cy="60"  r="5" fill="var(--glow)"   style="--delay:.3s"/>
+            <!-- center orb rings -->
+            <circle cx="240" cy="240" r="90" fill="none" stroke="rgba(0,229,204,.12)" stroke-width="1"/>
+            <circle cx="240" cy="240" r="60" fill="none" stroke="rgba(79,195,247,.08)" stroke-width="1"/>
+            <circle cx="240" cy="240" r="40" fill="rgba(0,229,204,.06)" stroke="rgba(0,229,204,.2)" stroke-width="1"/>
+            <!-- pulsing outer ring -->
+            <circle class="map-pin-outer" cx="240" cy="240" r="12" stroke-width="1" opacity=".5"/>
+            <circle cx="240" cy="240" r="6" fill="var(--aurora)" opacity=".9"/>
+          </svg>
+        </div>
+
+        <div class="ai-content reveal">
+          <div class="ai-content-head">
+            <p class="section-label">✦ AI Soul Matching</p>
+            <h2 class="section-title" id="ai-heading">Find who<br>walked your <em>path</em></h2>
+          </div>
+          <p class="ai-desc">VOYA reads the texture of your journey — not just where you went, but how you felt, what you noticed, what quietly changed in you. Then it maps your soul-signature across 94,000 stories.</p>
+
+          <div class="match-list" role="list" aria-label="Traveler matches">
+            <div class="match-row" role="listitem">
+              <div class="match-av" style="background:linear-gradient(135deg,var(--aurora),var(--glow))" aria-hidden="true">AS</div>
+              <div class="match-info">
+                <div class="match-name">Amara Solis</div>
+                <div class="match-route">Andes → Balkans → Nepal</div>
+              </div>
+              <div class="match-pct" aria-label="97% match">97%</div>
+              <button class="connect-btn" aria-label="Connect with Amara Solis">Connect</button>
+            </div>
+            <div class="match-row" role="listitem">
+              <div class="match-av" style="background:linear-gradient(135deg,var(--gold),var(--pulse))" aria-hidden="true">RK</div>
+              <div class="match-info">
+                <div class="match-name">Rohan Kale</div>
+                <div class="match-route">Himalayas → Borneo → Iceland</div>
+              </div>
+              <div class="match-pct" aria-label="93% match">93%</div>
+              <button class="connect-btn" aria-label="Connect with Rohan Kale">Connect</button>
+            </div>
+            <div class="match-row" role="listitem">
+              <div class="match-av" style="background:linear-gradient(135deg,var(--glow),#7c4dff)" aria-hidden="true">NB</div>
+              <div class="match-info">
+                <div class="match-name">Nadia Blanc</div>
+                <div class="match-route">Sahara → Siberia → Patagonia</div>
+              </div>
+              <div class="match-pct" aria-label="89% match">89%</div>
+              <button class="connect-btn" aria-label="Connect with Nadia Blanc">Connect</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="cosmic-divider"></div>
+
+    <!-- TESTIMONIALS -->
+    <section id="testimonials" class="container" aria-labelledby="testi-heading">
+      <div class="reveal">
+        <p class="section-label">✦ From the Community</p>
+        <h2 class="section-title" id="testi-heading">Words from<br><em>wanderers</em></h2>
+      </div>
+      <div class="testi-grid">
+        <article class="testi-card reveal reveal-delay-1">
+          <div class="testi-stars" aria-label="5 stars">★★★★★</div>
+          <blockquote class="testi-quote">"VOYA matched me with a solo trekker from Finland who felt the same vertigo at Machu Picchu that I did. We've been writing to each other for eight months. She feels like a sister I found in the cosmos."</blockquote>
+          <div class="testi-author">
+            <div class="testi-av" style="background:linear-gradient(135deg,var(--aurora),var(--glow))" aria-hidden="true">LP</div>
+            <div>
+              <div class="testi-name">Lena Park</div>
+              <div class="testi-meta">Solo traveler · 23 countries</div>
+            </div>
+          </div>
+        </article>
+        <article class="testi-card reveal reveal-delay-2">
+          <div class="testi-stars" aria-label="5 stars">★★★★★</div>
+          <blockquote class="testi-quote">"I tried to describe why the Atacama desert made me cry and couldn't. VOYA's AI helped me find the words — and three people who cried in the exact same spot."</blockquote>
+          <div class="testi-author">
+            <div class="testi-av" style="background:linear-gradient(135deg,var(--pulse),var(--gold))" aria-hidden="true">JR</div>
+            <div>
+              <div class="testi-name">Jules Ramírez</div>
+              <div class="testi-meta">Photographer · Buenos Aires</div>
+            </div>
+          </div>
+        </article>
+        <article class="testi-card reveal reveal-delay-3">
+          <div class="testi-stars" aria-label="5 stars">★★★★★</div>
+          <blockquote class="testi-quote">"My journal is now 200 entries deep. VOYA surfaces old ones I forgot and connects them to new chapters I didn't know were the same story. It's like having a co-author who knows you."</blockquote>
+          <div class="testi-author">
+            <div class="testi-av" style="background:linear-gradient(135deg,var(--glow),#7c4dff)" aria-hidden="true">TN</div>
+            <div>
+              <div class="testi-name">Tariq Nassim</div>
+              <div class="testi-meta">Writer · 4 continents explored</div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <div class="cosmic-divider"></div>
+
+    <!-- WORLD MAP -->
+    <section id="world-map" class="container" aria-labelledby="map-heading">
+      <div class="reveal">
+        <p class="section-label">✦ The Explorer Network</p>
+        <h2 class="section-title" id="map-heading">Stories live on<br>every <em>coordinate</em></h2>
+      </div>
+      <div class="map-container reveal">
+        <div class="map-svg-wrap">
+          <div class="map-overlay-label" aria-hidden="true">◈ Live Story Map</div>
+          <!-- Simplified SVG world map with story pins -->
+          <svg viewBox="0 0 900 440" width="100%" aria-label="World map showing story locations" role="img">
+            <!-- Continents as simplified shapes -->
+            <g fill="rgba(79,195,247,.07)" stroke="rgba(79,195,247,.12)" stroke-width=".5">
+              <!-- North America -->
+              <path d="M100,60 L200,50 L230,80 L220,150 L190,180 L160,170 L130,140 L110,120 Z"/>
+              <!-- South America -->
+              <path d="M170,200 L210,190 L225,240 L210,300 L185,320 L165,290 L158,240 Z"/>
+              <!-- Europe -->
+              <path d="M390,50 L450,45 L465,75 L455,110 L430,120 L405,105 L392,80 Z"/>
+              <!-- Africa -->
+              <path d="M400,130 L450,125 L470,170 L460,250 L440,280 L415,270 L398,220 L395,160 Z"/>
+              <!-- Asia -->
+              <path d="M470,40 L650,35 L680,70 L670,130 L640,150 L580,145 L530,120 L490,100 L470,70 Z"/>
+              <!-- Australia -->
+              <path d="M640,250 L700,245 L720,275 L710,310 L680,320 L650,305 L638,275 Z"/>
+              <!-- Greenland -->
+              <path d="M240,20 L290,18 L295,45 L275,55 L250,48 Z"/>
+            </g>
+            <!-- Story pins -->
+            <g>
+              <!-- Patagonia -->
+              <circle class="map-pin" cx="185" cy="295" r="4" fill="var(--aurora)" opacity=".9"/>
+              <circle class="map-pin-outer" cx="185" cy="295" r="9" stroke="var(--aurora)" stroke-width="1"/>
+              <!-- Sahara -->
+              <circle class="map-pin" cx="420" cy="180" r="4" fill="var(--pulse)" opacity=".9"/>
+              <circle class="map-pin-outer" cx="420" cy="180" r="9" stroke="var(--pulse)" stroke-width="1"/>
+              <!-- Hokkaido -->
+              <circle class="map-pin" cx="650" cy="85"  r="4" fill="var(--glow)" opacity=".9"/>
+              <circle class="map-pin-outer" cx="650" cy="85"  r="9" stroke="var(--glow)" stroke-width="1"/>
+              <!-- Norwegian fjords -->
+              <circle class="map-pin" cx="415" cy="60"  r="4" fill="var(--gold)" opacity=".9"/>
+              <circle class="map-pin-outer" cx="415" cy="60"  r="9" stroke="var(--gold)" stroke-width="1"/>
+              <!-- Himalayas -->
+              <circle class="map-pin" cx="580" cy="110" r="3" fill="var(--aurora)" opacity=".7"/>
+              <!-- Iceland -->
+              <circle class="map-pin" cx="330" cy="40"  r="3" fill="var(--glow)"   opacity=".7"/>
+              <!-- Borneo -->
+              <circle class="map-pin" cx="640" cy="220" r="3" fill="var(--pulse)"  opacity=".7"/>
+              <!-- Atacama -->
+              <circle class="map-pin" cx="170" cy="265" r="3" fill="var(--gold)"   opacity=".7"/>
+              <!-- Morocco -->
+              <circle class="map-pin" cx="398" cy="138" r="3" fill="var(--aurora)" opacity=".7"/>
+              <!-- Machu Picchu -->
+              <circle class="map-pin" cx="175" cy="245" r="3" fill="var(--glow)"   opacity=".7"/>
+            </g>
+          </svg>
+        </div>
+        <div class="map-stat-row" aria-label="Map statistics">
+          <div class="map-stat"><div class="map-stat-n">147</div><div class="map-stat-l">Countries</div></div>
+          <div class="map-stat"><div class="map-stat-n">6,200+</div><div class="map-stat-l">Locations Tagged</div></div>
+          <div class="map-stat"><div class="map-stat-n">94K</div><div class="map-stat-l">Active Journalers</div></div>
+          <div class="map-stat"><div class="map-stat-n">Real-time</div><div class="map-stat-l">Story Updates</div></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="cosmic-divider"></div>
+
+    <!-- TIMELINE -->
+    <section id="timeline" class="container" aria-labelledby="timeline-heading">
+      <div class="reveal">
+        <p class="section-label">✦ A Traveler's Chronicle</p>
+        <h2 class="section-title" id="timeline-heading">One journey,<br><em>many chapters</em></h2>
+      </div>
+      <div class="timeline-track" role="feed" aria-label="Example travel journal timeline">
+        <article class="timeline-entry">
+          <div class="timeline-dot" aria-hidden="true"></div>
+          <div class="timeline-date">March 2024 · Day 01</div>
+          <div class="timeline-location">✈ Kathmandu, Nepal</div>
+          <p class="timeline-text">"Landed at 2am. The city smelled of incense and diesel and something I couldn't name. My pack was too heavy. My heart was heavier. But something in the air said: good. This is right."</p>
+          <div class="timeline-tags">
+            <span class="timeline-tag">Arrival</span>
+            <span class="timeline-tag">Solo</span>
+            <span class="timeline-tag">Wonder</span>
+          </div>
+        </article>
+        <article class="timeline-entry">
+          <div class="timeline-dot" aria-hidden="true"></div>
+          <div class="timeline-date">March 2024 · Day 08</div>
+          <div class="timeline-location">🏔 Annapurna Base Camp</div>
+          <p class="timeline-text">"Above the clouds, breathing thin air, thinking thick thoughts. Three other trekkers sat in silence with me for an hour. We never exchanged names. We didn't need to."</p>
+          <div class="timeline-tags">
+            <span class="timeline-tag">Altitude</span>
+            <span class="timeline-tag">Silence</span>
+            <span class="timeline-tag">Connection</span>
+          </div>
+        </article>
+        <article class="timeline-entry">
+          <div class="timeline-dot" aria-hidden="true"></div>
+          <div class="timeline-date">March 2024 · Day 19</div>
+          <div class="timeline-location">🌊 Phewa Lake, Pokhara</div>
+          <p class="timeline-text">"The mountains reflected in the lake looked more real than the actual mountains. I thought: maybe we understand ourselves better in reflection. That's why we journal. That's why we travel."</p>
+          <div class="timeline-tags">
+            <span class="timeline-tag">Reflection</span>
+            <span class="timeline-tag">Rest Day</span>
+            <span class="timeline-tag">Insight</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <div class="cosmic-divider"></div>
+
+    <!-- SEARCH / DISCOVERY -->
+    <section id="discover" class="container" aria-labelledby="discover-heading">
+      <div class="reveal">
+        <p class="section-label">✦ Explore the Unknown</p>
+        <h2 class="section-title" id="discover-heading">Search 94,000<br><em>stories</em></h2>
+      </div>
+      <div class="discover-inner reveal">
+        <p style="font-size:.8rem;color:var(--muted);max-width:520px;line-height:1.7">Find journals by feeling, location, theme, or traveler type. VOYA searches meaning — not just keywords.</p>
+        <div class="search-row" role="search">
+          <label for="story-search" class="sr-only">Search stories by feeling, place, or theme</label>
+          <input class="search-input" id="story-search" type="search" placeholder="Search by feeling, place, theme… e.g. 'solitude in the mountains'" aria-label="Search stories" />
+          <button class="search-btn" aria-label="Search">Search ◈</button>
+        </div>
+        <div class="discover-tags" role="list" aria-label="Popular search tags">
+          <button class="discover-tag active" role="listitem">All</button>
+          <button class="discover-tag" role="listitem">Solo Travel</button>
+          <button class="discover-tag" role="listitem">Wilderness</button>
+          <button class="discover-tag" role="listitem">Lost & Found</button>
+          <button class="discover-tag" role="listitem">Ancient Ruins</button>
+          <button class="discover-tag" role="listitem">Desert</button>
+          <button class="discover-tag" role="listitem">Ocean</button>
+          <button class="discover-tag" role="listitem">Transformation</button>
+        </div>
+        <div class="discover-results" role="list">
+          <article class="result-card" role="listitem">
+            <div class="result-loc">Iceland</div>
+            <h3 class="result-title">The glacier made me feel like the planet had been waiting for me to witness it.</h3>
+            <div class="result-meta">Anya Kowalski · 218 reads</div>
+          </article>
+          <article class="result-card" role="listitem">
+            <div class="result-loc">Tibetan Plateau</div>
+            <h3 class="result-title">At 4,500m I had my first thought with no words attached to it.</h3>
+            <div class="result-meta">Dev Sharma · 341 reads</div>
+          </article>
+          <article class="result-card" role="listitem">
+            <div class="result-loc">Atacama, Chile</div>
+            <h3 class="result-title">The driest place on earth taught me what it means to be thirsty for something real.</h3>
+            <div class="result-meta">Camille Dupont · 189 reads</div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <div class="cosmic-divider"></div>
+
+    <!-- WRITE -->
+    <section id="write" class="container" aria-labelledby="write-heading">
+      <div class="write-center reveal">
+        <p class="section-label">✦ Begin Your Transmission</p>
+        <h2 class="section-title" id="write-heading">Your story is<br>a signal in the <em>cosmos</em></h2>
+        <p class="write-desc">Write one moment. One place. One feeling that changed your coordinates forever. AI will help you find the words — and the people.</p>
+        <div class="journal-composer" aria-label="Journal entry composer">
+          <div class="composer-label" aria-hidden="true">New Entry · Now</div>
+          <label for="journal-input" class="sr-only">Write your travel story</label>
+          <textarea class="composer-ta" id="journal-input" rows="5" placeholder="There was this moment in Kyoto, just before dawn, when the fog rolled through the bamboo and I realized I'd stopped thinking about home entirely…" aria-multiline="true"></textarea>
+          <div class="ai-hint" aria-live="polite" aria-label="AI suggestion">
+            <span class="ai-hint-icon" aria-hidden="true">◈</span>
+            <span id="ai-suggestion-text">AI senses a theme of <strong style="color:var(--aurora)">surrender &amp; presence</strong> in this entry. 23 travelers share this moment — shall I connect you?</span>
+          </div>
+        </div>
+        <div class="write-actions">
+          <button class="btn-primary" aria-label="Publish your journal entry">Transmit Story</button>
+          <button class="btn-ghost" aria-label="Find matching travelers">Find My Travelers</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="cosmic-divider"></div>
+
+    <!-- PRICING -->
+    <section id="pricing" class="container" aria-labelledby="pricing-heading">
+      <div class="reveal" style="text-align:center;max-width:600px;margin:0 auto 0">
+        <p class="section-label">✦ Choose Your Journey</p>
+        <h2 class="section-title" id="pricing-heading">Start free.<br>Explore <em>further.</em></h2>
+      </div>
+      <div class="pricing-grid" role="list">
+        <article class="price-card reveal reveal-delay-1" role="listitem" aria-label="Explorer free plan">
+          <div class="plan-name">Explorer</div>
+          <div class="plan-price"><sup>$</sup>0<sub>/mo</sub></div>
+          <p class="plan-desc">Everything you need to begin your journey and find your first connections.</p>
+          <ul class="plan-features" aria-label="Explorer plan features">
+            <li>Unlimited journal entries</li>
+            <li>3 AI soul matches / month</li>
+            <li>Public story publishing</li>
+            <li>Basic world map access</li>
+            <li>Community feed</li>
+          </ul>
+          <a href="#write" class="btn-ghost" style="display:inline-flex">Start Free</a>
+        </article>
+        <article class="price-card featured-plan reveal reveal-delay-2" role="listitem" aria-label="Voyager plan, most popular">
+          <div class="plan-badge">Most Popular</div>
+          <div class="plan-name">Voyager</div>
+          <div class="plan-price"><sup>$</sup>12<sub>/mo</sub></div>
+          <p class="plan-desc">For the committed wanderer who wants deeper connections and richer AI insight.</p>
+          <ul class="plan-features" aria-label="Voyager plan features">
+            <li>Everything in Explorer</li>
+            <li>Unlimited AI soul matches</li>
+            <li>AI writing co-pilot</li>
+            <li>Full timeline &amp; chapters view</li>
+            <li>Private journal mode</li>
+            <li>Advanced story search</li>
+            <li>Priority community access</li>
+          </ul>
+          <a href="#write" class="btn-primary" style="display:inline-flex">Begin Voyager</a>
+        </article>
+        <article class="price-card reveal reveal-delay-3" role="listitem" aria-label="Odyssey plan for teams">
+          <div class="plan-name">Odyssey</div>
+          <div class="plan-price"><sup>$</sup>29<sub>/mo</sub></div>
+          <p class="plan-desc">For travel writers, researchers, and communities building shared story archives.</p>
+          <ul class="plan-features" aria-label="Odyssey plan features">
+            <li>Everything in Voyager</li>
+            <li>Team journal spaces</li>
+            <li>API access for integrations</li>
+            <li>Custom AI matching filters</li>
+            <li>Analytics dashboard</li>
+            <li>Dedicated story curator</li>
+          </ul>
+          <a href="#" class="btn-ghost" style="display:inline-flex">Contact Us</a>
+        </article>
+      </div>
+    </section>
+
+    <div class="cosmic-divider"></div>
+
+    <!-- APP PREVIEW -->
+    <section id="app-preview" class="container" aria-labelledby="app-heading">
+      <div class="app-grid">
+        <div class="app-phone-wrap" aria-hidden="true">
+          <div class="phone-shell">
+            <div class="phone-top"><div class="phone-notch"></div></div>
+            <div class="phone-screen">
+              <div class="phone-ui-label">My Journal</div>
+              <div class="phone-ui-tag">Annapurna, Nepal</div>
+              <div class="phone-ui-text" style="margin-top:8px">"Above the clouds, breathing thin air, thinking thick thoughts..."</div>
+              <div class="phone-ui-match">
+                <div class="phone-ui-av"></div>
+                <div class="phone-ui-matchtext">Amara S. walked this path</div>
+                <div class="phone-ui-pct">97%</div>
+              </div>
+              <div style="margin-top:12px;height:1px;background:rgba(79,195,247,.1)"></div>
+              <div class="phone-ui-label" style="margin-top:10px">AI Insight</div>
+              <div class="phone-ui-text">Theme: <span style="color:var(--aurora)">Solitude becoming peace</span></div>
+            </div>
+          </div>
+          <div class="phone-shell">
+            <div class="phone-top"><div class="phone-notch"></div></div>
+            <div class="phone-screen">
+              <div class="phone-ui-label">Soul Matches</div>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px">
+                <div class="phone-ui-match">
+                  <div class="phone-ui-av" style="background:linear-gradient(135deg,#ff6b6b,#ffd54f)"></div>
+                  <div class="phone-ui-matchtext">Rohan K. · Himalayas</div>
+                  <div class="phone-ui-pct">93%</div>
+                </div>
+                <div class="phone-ui-match">
+                  <div class="phone-ui-av" style="background:linear-gradient(135deg,#4fc3f7,#7c4dff)"></div>
+                  <div class="phone-ui-matchtext">Nadia B. · Siberia</div>
+                  <div class="phone-ui-pct">89%</div>
+                </div>
+                <div class="phone-ui-match">
+                  <div class="phone-ui-av"></div>
+                  <div class="phone-ui-matchtext">Lena P. · Finland</div>
+                  <div class="phone-ui-pct">86%</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="app-content reveal">
+          <p class="section-label">✦ Mobile App</p>
+          <h2 class="section-title" id="app-heading">Your journal,<br>anywhere on <em>Earth</em></h2>
+          <div class="app-list">
+            <div class="app-feature">
+              <div class="app-feature-icon" aria-hidden="true">✍️</div>
+              <div class="app-feature-text">
+                <h4>Offline Journal Mode</h4>
+                <p>Write in remote deserts, mountain huts, or planes with no signal. Syncs when you reconnect.</p>
+              </div>
+            </div>
+            <div class="app-feature">
+              <div class="app-feature-icon" aria-hidden="true">📍</div>
+              <div class="app-feature-text">
+                <h4>Auto Location Tagging</h4>
+                <p>Every entry is pinned to your exact coordinates — building your living travel map automatically.</p>
+              </div>
+            </div>
+            <div class="app-feature">
+              <div class="app-feature-icon" aria-hidden="true">🔔</div>
+              <div class="app-feature-text">
+                <h4>Match Notifications</h4>
+                <p>Get notified the moment a new traveler with a matching soul-path publishes their story.</p>
+              </div>
+            </div>
+          </div>
+          <div class="app-store-row">
+            <a href="#" class="store-btn" aria-label="Download on the App Store">
+              <span class="store-icon" aria-hidden="true">🍎</span>
+              <div class="store-text"><small>Download on the</small><strong>App Store</strong></div>
+            </a>
+            <a href="#" class="store-btn" aria-label="Get it on Google Play">
+              <span class="store-icon" aria-hidden="true">▶</span>
+              <div class="store-text"><small>Get it on</small><strong>Google Play</strong></div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main><!-- /main -->
+
+  <!-- ── FOOTER ──────────────────────────────────────────────── -->
+  <footer role="contentinfo">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <div class="footer-logo">VOY<span>A</span></div>
+        <p>Every wanderer leaves a signal. Every signal finds its star. Your story is worth telling.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="#how-it-works">How It Works</a></li>
+          <li><a href="#ai-matching">AI Matching</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#app-preview">Mobile App</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Community</h4>
+        <ul>
+          <li><a href="#journals">Explore Journals</a></li>
+          <li><a href="#world-map">World Map</a></li>
+          <li><a href="#discover">Discover</a></li>
+          <li><a href="#testimonials">Stories</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="#">About VOYA</a></li>
+          <li><a href="#">Privacy Policy</a></li>
+          <li><a href="#">Terms of Use</a></li>
+          <li><a href="#">Contact</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 VOYA Inc. All rights reserved.</span>
+      <span>Built for those who wander with purpose.</span>
+    </div>
+  </footer>
+
+  <script>
+  /* ============================================================
+     UTILITY
+  ============================================================ */
+  const $ = (sel, ctx = document) => ctx.querySelector(sel);
+  const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
+
+  /* ============================================================
+     STARFIELD — Canvas-based with depth layers & drift
+  ============================================================ */
+  (function initStarfield() {
+    const canvas = $('#starfield-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    let W, H, stars = [], raf;
+
+    const STAR_COUNT = 320;
+    const LAYERS = [
+      { count: 160, minR: 0.3, maxR: 0.8, speed: 0.008, opacity: [0.08, 0.45] },
+      { count: 100, minR: 0.6, maxR: 1.4, speed: 0.014, opacity: [0.15, 0.75] },
+      { count:  60, minR: 1.2, maxR: 2.4, speed: 0.022, opacity: [0.25, 1.0]  },
+    ];
+
+    function resize() {
+      W = canvas.width  = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+
+    function createStars() {
+      stars = [];
+      LAYERS.forEach(layer => {
+        for (let i = 0; i < layer.count; i++) {
+          const [minO, maxO] = layer.opacity;
+          stars.push({
+            x:       Math.random() * W,
+            y:       Math.random() * H,
+            r:       layer.minR + Math.random() * (layer.maxR - layer.minR),
+            baseO:   minO + Math.random() * (maxO - minO),
+            phase:   Math.random() * Math.PI * 2,
+            twinkle: 0.5 + Math.random() * 2.5,
+            speed:   layer.speed,
+            drift:   (Math.random() - 0.5) * 0.04,
+            color:   Math.random() < 0.08
+                       ? `rgba(79,195,247,`
+                       : Math.random() < 0.05
+                         ? `rgba(0,229,204,`
+                         : `rgba(255,255,255,`,
+          });
+        }
+      });
+    }
+
+    let t = 0;
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      t += 0.016;
+
+      stars.forEach(s => {
+        const o = s.baseO * (0.5 + 0.5 * Math.sin(t * s.twinkle + s.phase));
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = `${s.color}${o})`;
+        ctx.fill();
+
+        // Soft glow for larger stars
+        if (s.r > 1.5) {
+          const grad = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r * 4);
+          grad.addColorStop(0, `${s.color}${o * 0.35})`);
+          grad.addColorStop(1, `${s.color}0)`);
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.r * 4, 0, Math.PI * 2);
+          ctx.fillStyle = grad;
+          ctx.fill();
+        }
+
+        // Slow drift
+        s.x += s.drift;
+        s.y -= s.speed;
+        if (s.y < -4) { s.y = H + 4; s.x = Math.random() * W; }
+        if (s.x < -4) s.x = W + 4;
+        if (s.x > W + 4) s.x = -4;
+      });
+
+      raf = requestAnimationFrame(draw);
+    }
+
+    function init() {
+      resize();
+      createStars();
+      cancelAnimationFrame(raf);
+      draw();
+    }
+
+    window.addEventListener('resize', () => { resize(); createStars(); });
+    init();
+  })();
+
+  /* ============================================================
+     CUSTOM CURSOR (fine-pointer only)
+  ============================================================ */
+  (function initCursor() {
+    if (!window.matchMedia('(pointer: fine)').matches) return;
+
+    const dot  = $('#cursor');
+    const ring = $('#cursor-ring');
+    let mx = 0, my = 0, rx = 0, ry = 0;
+
+    document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+
+    // Dot follows instantly; ring lerps behind
+    let raf;
+    (function animate() {
+      rx += (mx - rx) * 0.14;
+      ry += (my - ry) * 0.14;
+      dot.style.transform  = `translate(calc(${mx}px - 50%), calc(${my}px - 50%))`;
+      ring.style.transform = `translate(calc(${rx}px - 50%), calc(${ry}px - 50%))`;
+      raf = requestAnimationFrame(animate);
+    })();
+
+    const interactable = 'a, button, [role="button"], textarea, input, label, .journal-card, .match-row, .result-card, .store-btn';
+    $$(interactable).forEach(el => {
+      el.addEventListener('mouseenter', () => { dot.classList.add('hovering');  ring.classList.add('hovering'); });
+      el.addEventListener('mouseleave', () => { dot.classList.remove('hovering'); ring.classList.remove('hovering'); });
+    });
+  })();
+
+  /* ============================================================
+     SCROLL REVEAL
+  ============================================================ */
+  (function initReveal() {
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          obs.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+    $$('.reveal').forEach(el => obs.observe(el));
+
+    // Timeline entries
+    const tlObs = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); tlObs.unobserve(e.target); } });
+    }, { threshold: 0.2 });
+    $$('.timeline-entry').forEach((el, i) => {
+      el.style.transitionDelay = `${i * 0.12}s`;
+      tlObs.observe(el);
+    });
+  })();
+
+  /* ============================================================
+     DISCOVER TAG FILTER
+  ============================================================ */
+  (function initDiscoverTags() {
+    $$('.discover-tag').forEach(btn => {
+      btn.addEventListener('click', () => {
+        $$('.discover-tag').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+  })();
+
+  /* ============================================================
+     AI HINT — cycles on typing
+  ============================================================ */
+  (function initAiHint() {
+    const ta  = $('#journal-input');
+    const out = $('#ai-suggestion-text');
+    if (!ta || !out) return;
+
+    const hints = [
+      'AI senses a theme of <strong style="color:var(--aurora)">surrender &amp; presence</strong>. 23 travelers share this moment — shall I connect you?',
+      'Theme detected: <strong style="color:var(--aurora)">belonging in the unfamiliar</strong>. 41 explorers resonated. Find them?',
+      'Reading: <strong style="color:var(--aurora)">solitude becoming peace</strong>. 18 wanderers crossed this threshold.',
+      'Detected: <strong style="color:var(--aurora)">wonder without destination</strong>. 67 travelers feel the same pull.',
+      'Theme: <strong style="color:var(--aurora)">the self dissolved by landscape</strong>. 31 kindred writers await.',
+    ];
+    let idx = 0, debounce;
+
+    ta.addEventListener('input', () => {
+      clearTimeout(debounce);
+      if (ta.value.length < 20) return;
+      debounce = setTimeout(() => {
+        idx = (idx + 1) % hints.length;
+        out.innerHTML = hints[idx];
+      }, 600);
+    });
+  })();
+
+  /* ============================================================
+     SEARCH INPUT INTERACTIVITY
+  ============================================================ */
+  (function initSearch() {
+    const btn = $('.search-btn');
+    const inp = $('#story-search');
+    if (!btn || !inp) return;
+    btn.addEventListener('click', () => {
+      if (inp.value.trim()) {
+        btn.textContent = 'Searching…';
+        setTimeout(() => { btn.textContent = 'Search ◈'; }, 1200);
+      }
+    });
+  })();
+
+  /* ============================================================
+     NAV MOBILE TOGGLE (basic)
+  ============================================================ */
+  (function initMobileNav() {
+    const mBtn = $('.nav-mobile-btn');
+    const links = $('.nav-links');
+    if (!mBtn || !links) return;
+    mBtn.addEventListener('click', () => {
+      const open = mBtn.getAttribute('aria-expanded') === 'true';
+      mBtn.setAttribute('aria-expanded', String(!open));
+    });
+  })();
+
+  /* SR-only utility class (injected once) */
+  const srStyle = document.createElement('style');
+  srStyle.textContent = '.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}';
+  document.head.appendChild(srStyle);
+  </script>
+</body>
+</html>
