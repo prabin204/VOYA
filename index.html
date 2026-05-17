@@ -2848,16 +2848,16 @@
         const date = new Date(j.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         const location = j.location?.name ? `${j.location.name}${j.location.country ? ', ' + j.location.country : ''}` : 'Somewhere on Earth';
         return `
-          <div class="live-journal-card">
+          <a href="/journal.html?id=${j._id}" class="live-journal-card" style="display:block;text-decoration:none;color:inherit;">
             <div class="live-journal-loc">${location}</div>
             <h3 class="live-journal-title">${j.title}</h3>
             <p class="live-journal-excerpt">${j.content}</p>
             <div class="live-journal-meta">
               <div class="live-journal-av">${initials}</div>
               <span>${j.user?.username || 'Anonymous'}</span>
-              <span style="margin-left:auto">${date}</span>
+              <span style="margin-left:auto;display:flex;gap:12px;"><span>${j.likes?.length || 0} likes</span><span>${j.comments?.length || 0} comments</span><span>${date}</span></span>
             </div>
-          </div>
+          </a>
         `;
       }).join('');
     } catch(e) { console.log('Could not load journals:', e); }
