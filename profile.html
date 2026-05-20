@@ -380,6 +380,14 @@
       <input type="text" id="write-location" placeholder="Kathmandu, Nepal" />
     </div>
     <div class="field">
+      <label>Photo (optional)</label>
+      <input type="file" id="write-image" accept="image/*" style="width:100%;padding:10px;background:rgba(2,4,8,.8);border:1px solid rgba(79,195,247,.14);color:var(--star);font-size:.75rem;"/>
+      <div id="image-preview" style="margin-top:8px;display:none;">
+        <img id="preview-img" style="width:100%;max-height:200px;object-fit:cover;border:1px solid rgba(79,195,247,.1);" alt="Preview"/>
+      </div>
+      <p style="font-size:.55rem;color:var(--muted);margin-top:6px;">Max 5MB — JPG, PNG, WEBP</p>
+    </div>
+    <div class="field">
       <label>Your Story</label>
       <textarea id="write-content" placeholder="Write your moment, memory, or wonder…" style="min-height:180px"></textarea>
     </div>
@@ -650,9 +658,11 @@
     grid.innerHTML = journals.map(j => {
       const date = new Date(j.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       const loc = j.location?.name ? `${j.location.name}${j.location.country ? ', ' + j.location.country : ''}` : 'Somewhere on Earth';
+      const imgHtml = j.image ? `<img src="${j.image}" alt="Journal photo" style="width:100%;max-height:200px;object-fit:cover;margin-bottom:16px;border:1px solid rgba(79,195,247,.1);"/>` : '';
       return `
-        <article class="journal-card" data-id="${j._id}">
-          ${isOwner ? `<button class="journal-delete" data-id="${j._id}" aria-label="Delete entry" title="Delete">✕</button>` : ''}
+        <article class="journal-card" data-id="${j._id}" style="cursor:pointer;" onclick="window.location.href='/journal.html?id=${j._id}'">
+          ${isOwner ? `<button class="journal-delete" data-id="${j._id}" aria-label="Delete entry" title="Delete" onclick="event.stopPropagation()">✕</button>` : ''}
+          ${imgHtml}
           <div class="journal-loc">${loc}</div>
           <h3 class="journal-title">${j.title}</h3>
           <p class="journal-content">${j.content}</p>
@@ -743,10 +753,24 @@
     document.getElementById('write-cancel-btn').addEventListener('click', () => overlay.classList.remove('open'));
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
 
+    // Image preview
+    document.getElementById('write-image')?.addEventListener('change', function() {
+      const file = this.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = e => {
+          document.getElementById('preview-img').src = e.target.result;
+          document.getElementById('image-preview').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
     document.getElementById('submit-journal-btn').addEventListener('click', async () => {
       const locationRaw = document.getElementById('write-location').value.trim();
       const content = document.getElementById('write-content').value.trim();
       const mood = document.getElementById('write-mood').value.trim() || 'wonder';
+      const imageFile = document.getElementById('write-image')?.files[0];
       const errEl = document.getElementById('write-error');
       const sucEl = document.getElementById('write-success');
       const btn = document.getElementById('submit-journal-btn');
@@ -757,26 +781,50 @@
 
       btn.textContent = 'Transmitting…'; btn.disabled = true;
 
+      // Upload image first if selected
+      let imageUrl = '';
+      if (imageFile) {
+        btn.textContent = 'Uploading image…';
+        const formData = new FormData();
+        formData.append('image', imageFile);
+        try {
+          const uploadRes = await fetch(`${API}/journals/upload`, {
+            method: 'POST',
+            headers: { 'x-auth-token': Auth.token },
+            body: formData
+          });
+          const uploadData = await uploadRes.json();
+          if (uploadData.url) imageUrl = uploadData.url;
+        } catch {
+          errEl.textContent = 'Image upload failed. Try again.';
+          btn.disabled = false; btn.textContent = 'Transmit Story'; return;
+        }
+      }
+
       const locationParts = locationRaw.split(',');
       const location = locationRaw ? {
         name: locationParts[0]?.trim(),
         country: locationParts[1]?.trim() || ''
       } : {};
 
+      btn.textContent = 'Saving story…';
+
       try {
         const data = await apiPost('/journals', {
           title: content.split('.')[0].slice(0, 80) || 'A moment in time',
-          content, mood, isPublic: true, location
+          content, mood, isPublic: true, location, image: imageUrl
         });
         if (data._id) {
           sucEl.textContent = '✅ Story transmitted!';
           errEl.textContent = '';
           document.getElementById('write-content').value = '';
           document.getElementById('write-location').value = '';
+          if (document.getElementById('write-image')) document.getElementById('write-image').value = '';
+          if (document.getElementById('image-preview')) document.getElementById('image-preview').style.display = 'none';
           setTimeout(() => {
             overlay.classList.remove('open');
             sucEl.textContent = '';
-            loadPage(); // refresh
+            loadPage();
           }, 1200);
         } else {
           errEl.textContent = data.message || 'Failed to save.';
